@@ -1,0 +1,11 @@
+node_modules/
+android/.gradle/
+android/app/build/
+android/build/
+android/capacitor-cordova-android-plugins/build/
+android/capacitor-android/build/
+android/.idea/
+*.iml
+.DS_Store
+android/app/huihui-release.jks
+android/local.properties

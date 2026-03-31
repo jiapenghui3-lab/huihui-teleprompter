@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>辉辉提词器</title>
+<style>
+:root{--bg:#f5f7fb;--surface:#fff;--ink:#1a1a2e;--muted:#8892a4;--primary:#4f6ef7;--primary-light:#e8ecff;--danger:#ef4444;--success:#22c55e;--line:#e5e7eb;--radius:12px;--shadow:0 2px 12px rgba(0,0,0,.06);}
+[data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--ink:#e2e8f0;--muted:#94a3b8;--primary:#818cf8;--primary-light:#1e1b4b;--danger:#f87171;--success:#4ade80;--line:#334155;--shadow:0 2px 12px rgba(0,0,0,.3);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding:16px;padding-top:calc(env(safe-area-inset-top,16px) + 12px);padding-bottom:70px;}
+button{cursor:pointer;border:none;font-family:inherit;}
+input,textarea,select{font-family:inherit;font-size:14px;}
+.container{max-width:800px;margin:0 auto;}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.header h1{font-size:20px;}
+.header h1 span{color:var(--primary);}
+.header-right{display:flex;gap:8px;align-items:center;}
+.btn{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;transition:.15s;}
+.btn-primary{background:var(--primary);color:#fff;}.btn-primary:hover{opacity:.85;}
+.btn-outline{background:transparent;border:1px solid var(--line);color:var(--ink);}.btn-outline:hover{background:var(--primary-light);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:12px;}
+.card-title{font-size:16px;font-weight:600;margin-bottom:12px;}
+.form-group{margin-bottom:12px;}
+.form-group label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px;}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);outline:none;}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--primary);}
+.form-row{display:flex;gap:12px;}.form-row>*{flex:1;}
+.text-muted{color:var(--muted);font-size:13px;}
+.text-success{color:var(--success);}.text-danger{color:var(--danger);}
+.flex{display:flex;}.gap-8{gap:8px;}.items-center{align-items:center;}.justify-between{justify-content:space-between;}.flex-wrap{flex-wrap:wrap;}
+.tab-bar{display:flex;gap:0;border-top:1px solid var(--line);overflow:hidden;position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--surface);padding-bottom:env(safe-area-inset-bottom,0);}
+.tab{flex:1;padding:12px 10px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;background:var(--surface);color:var(--muted);transition:.15s;}
+.tab.active{color:var(--primary);border-top:2px solid var(--primary);}
+.section{display:none;}.section.active{display:block;}
+.content-item{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;}
+.content-topic{font-size:13px;color:var(--primary);font-weight:600;margin-bottom:6px;}
+.content-body{font-size:14px;line-height:1.8;white-space:pre-wrap;}
+.content-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
+.improve-panel{margin-top:12px;border-top:1px solid var(--line);padding-top:12px;}
+.improve-panel textarea{width:100%;min-height:60px;margin-bottom:8px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);}
+.learned-tag{display:inline-block;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:12px;font-size:12px;margin:2px;}
+.spinner{display:inline-block;width:20px;height:20px;border:3px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;color:#fff;font-size:14px;z-index:9999;animation:slideIn .3s;}
+.toast.success{background:var(--success);}.toast.error{background:var(--danger);}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+.theme-toggle,.menu-toggle{background:none;font-size:18px;padding:4px 8px;border-radius:6px;cursor:pointer;border:none;}
+.dur-opt{font-size:12px;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:3px;white-space:nowrap;}
+
+/* 菜单 */
+.menu-dropdown{position:absolute;left:16px;top:50px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:200;min-width:160px;display:none;overflow:hidden;}
+.menu-dropdown.active{display:block;}
+.menu-item{display:block;width:100%;padding:14px 18px;text-align:left;font-size:14px;color:var(--ink);background:none;border:none;border-bottom:1px solid var(--line);cursor:pointer;font-family:inherit;}
+.menu-item:last-child{border-bottom:none;}
+.menu-item:active{background:var(--primary-light);}
+.menu-backdrop{position:fixed;inset:0;z-index:199;display:none;}
+.menu-backdrop.active{display:block;}
+
+/* onboarding */
+.onboarding{position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;}
+.ob-step{text-align:center;max-width:340px;}
+.ob-icon{font-size:60px;margin-bottom:20px;}
+.ob-title{font-size:22px;font-weight:700;margin-bottom:10px;}
+.ob-desc{font-size:15px;color:var(--muted);line-height:1.7;margin-bottom:30px;}
+.ob-dots{display:flex;gap:8px;justify-content:center;margin-bottom:24px;}
+.ob-dot{width:8px;height:8px;border-radius:50%;background:var(--line);}
+.ob-dot.active{background:var(--primary);width:20px;border-radius:4px;}
+
+/* loading */
+.loading-card{text-align:center;padding:30px 20px;}
+
+/* 收藏提示气泡 */
+.fav-tip{position:fixed;top:55px;left:16px;background:var(--primary);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,.15);animation:fadeIn .3s;}
+.fav-tip::after{content:'';position:absolute;top:-8px;left:20px;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:8px solid var(--primary);}
+.fav-tip-backdrop{position:fixed;inset:0;z-index:299;display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.loading-dots{display:inline-flex;gap:6px;margin-bottom:12px;}
+.loading-dots span{width:10px;height:10px;background:var(--primary);border-radius:50%;animation:bounce .6s infinite alternate;}
+.loading-dots span:nth-child(2){animation-delay:.2s;}
+.loading-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{to{transform:translateY(-8px);opacity:.4;}}
+.loading-text{color:var(--muted);font-size:14px;}
+</style>
+</head>
+<body>
+
+<!-- Onboarding -->
+<div class="onboarding" id="onboarding" style="display:none;">
+  <div class="ob-step" id="obStep">
+    <div class="ob-icon" id="obIcon"></div>
+    <div class="ob-title" id="obTitle"></div>
+    <div class="ob-desc" id="obDesc"></div>
+    <div class="ob-dots" id="obDots"></div>
+    <button class="btn btn-primary" style="width:100%;" id="obBtn" onclick="nextOnboarding()">下一步</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+      <h1><span>辉辉</span>提词器</h1>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+  </div>
+
+  <!-- 菜单 -->
+  <div class="menu-backdrop" id="menuBackdrop" onclick="toggleMenu()"></div>
+  <div class="menu-dropdown" id="menuDropdown">
+    <button class="menu-item" onclick="openPage('favorites')">⭐ 我的收藏</button>
+    <button class="menu-item" onclick="openPage('settings')">⚙️ 设置</button>
+    <button class="menu-item" onclick="openPage('guide')">📘 使用指南</button>
+    <button class="menu-item" onclick="openPage('privacy')">🔒 隐私政策</button>
+  </div>
+
+  <!-- 主内容区 -->
+  <div id="mainContent">
+    <!-- Tab 导航（底部固定） -->
+    <div class="tab-bar">
+      <div class="tab active" onclick="showTab(0)">📝 生成</div>
+      <div class="tab" onclick="showTab(1)">✏️ 改写</div>
+      <div class="tab" onclick="showTab(2)">📂 参考</div>
+      <div class="tab" onclick="showTab(3)">📖 提词器</div>
+    </div>
+
+    <!-- Tab 0: 生成 -->
+    <div class="section active" id="sec-0">
+      <div class="card">
+        <div class="flex gap-8" style="margin-bottom:10px;">
+          <input id="topic" type="text" placeholder="输入主题，或留空让辉辉选题" style="flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);">
+          <button class="btn btn-primary" onclick="doGenerate()">生成</button>
+        </div>
+        <div class="flex gap-8 flex-wrap">
+          <label class="dur-opt"><input type="radio" name="genDur" value="1" checked> <span class="gen-dur-label">1分钟</span></label>
+          <label class="dur-opt"><input type="radio" name="genDur" value="3"> <span class="gen-dur-label">3分钟</span></label>
+          <label class="dur-opt"><input type="radio" name="genDur" value="5"> <span class="gen-dur-label">5分钟</span></label>
+          <span style="width:1px;background:var(--line);margin:0 4px;"></span>
+          <label class="dur-opt"><input type="radio" name="genMode" value="outline" checked onchange="updateDurLabels('gen')"> 大纲</label>
+          <label class="dur-opt"><input type="radio" name="genMode" value="script" onchange="updateDurLabels('gen')"> 逐字稿</label>
+          <label class="dur-opt"><input type="radio" name="genMode" value="questions" onchange="updateDurLabels('gen')"> 问题</label>
+        </div>
+      </div>
+      <div id="resultArea"></div>
+    </div>
+
+    <!-- Tab 1: 改写 -->
+    <div class="section" id="sec-1">
+      <div class="card">
+        <div class="form-group"><label>粘贴需要改写的文案</label><textarea id="rewriteInput" rows="6" placeholder="粘贴别人的文案，辉辉帮你用自己的话重新讲..."></textarea></div>
+        <div class="flex gap-8 items-center flex-wrap" style="margin-bottom:10px;">
+          <label class="dur-opt"><input type="radio" name="rwDur" value="1" checked> <span class="rw-dur-label">1分钟</span></label>
+          <label class="dur-opt"><input type="radio" name="rwDur" value="3"> <span class="rw-dur-label">3分钟</span></label>
+          <label class="dur-opt"><input type="radio" name="rwDur" value="5"> <span class="rw-dur-label">5分钟</span></label>
+          <span style="width:1px;background:var(--line);margin:0 4px;height:16px;"></span>
+          <label class="dur-opt"><input type="radio" name="rwMode" value="outline" checked onchange="updateDurLabels('rw')"> 大纲</label>
+          <label class="dur-opt"><input type="radio" name="rwMode" value="script" onchange="updateDurLabels('rw')"> 逐字稿</label>
+          <label class="dur-opt"><input type="radio" name="rwMode" value="questions" onchange="updateDurLabels('rw')"> 问题</label>
+        </div>
+        <button class="btn btn-primary" onclick="doRewrite()">辉辉改写</button>
+        <div id="rewriteResult" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <!-- Tab 2: 参考 -->
+    <div class="section" id="sec-2">
+      <div class="card" id="refInputCard">
+        <div class="form-group"><label>粘贴参考文案</label><textarea id="refContent" rows="6" placeholder="把好文案喂给辉辉，它会学习风格..."></textarea></div>
+        <div class="form-group"><label>备注标题（选填）</label><input id="refTitle" placeholder="如：某某账号爆款文案"></div>
+        <button class="btn btn-primary" onclick="doAddRef()">添加</button>
+      </div>
+      <div id="refList"></div>
+      <div id="refAddMore" style="display:none;text-align:center;margin-top:12px;">
+        <button class="btn btn-outline" onclick="showRefInput()">+ 继续添加</button>
+      </div>
+    </div>
+
+    <!-- Tab 3: 提词器 -->
+    <div class="section" id="sec-3">
+      <div class="card">
+        <div class="form-group"><label>提词内容</label><textarea id="tpInput" rows="6" placeholder="粘贴或输入提词内容，也可以从生成/改写页点「提词器」直接送入..."></textarea></div>
+        <div class="flex gap-8 items-center flex-wrap" style="margin-bottom:12px;">
+          <label class="dur-opt"><input type="radio" name="tpHeight" value="30" checked> 30%屏</label>
+          <label class="dur-opt"><input type="radio" name="tpHeight" value="40"> 40%屏</label>
+          <label class="dur-opt"><input type="radio" name="tpHeight" value="50"> 半屏</label>
+          <span style="width:1px;background:var(--line);margin:0 8px;height:16px;"></span>
+          <label class="dur-opt"><input type="checkbox" id="tpMirror"> 镜像</label>
+        </div>
+        <div class="flex gap-8">
+          <button class="btn btn-primary" style="flex:1;" onclick="launchFloatingTp()">启动悬浮提词器</button>
+          <button class="btn btn-danger" onclick="stopFloatingTp()">关闭</button>
+        </div>
+        <div class="text-muted" style="margin-top:10px;">启动后悬浮在屏幕顶部，切到相机也能看到。勾选「镜像」可用于反射式提词器。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 收藏页 -->
+  <div id="favoritesPage" style="display:none;">
+    <div class="flex justify-between items-center" style="margin-bottom:16px;">
+      <div class="card-title" style="margin:0;">⭐ 我的收藏</div>
+      <button class="btn btn-sm btn-outline" onclick="closePage()">返回</button>
+    </div>
+    <div id="favList"></div>
+  </div>
+
+  <!-- 设置页 -->
+  <div id="settingsPage" style="display:none;">
+    <div class="flex justify-between items-center" style="margin-bottom:16px;">
+      <div class="card-title" style="margin:0;">⚙️ 设置</div>
+      <button class="btn btn-sm btn-outline" onclick="closePage()">返回</button>
+    </div>
+    <div class="card">
+      <div class="card-title">行业配置</div>
+      <div class="form-row">
+        <div class="form-group"><label>行业 *</label><input id="cfgIndustry" placeholder="如：职业教育、餐饮、美妆"></div>
+        <div class="form-group"><label>品牌名 *</label><input id="cfgCompany" placeholder="如：某某学校"></div>
+      </div>
+      <div class="form-group"><label>简介</label><textarea id="cfgDesc" rows="2" placeholder="一句话说清楚你做什么、客户是谁"></textarea></div>
+      <div class="form-group"><label>行文逻辑（选填）</label><textarea id="cfgGuide" rows="4" placeholder="粘贴你的文案生成框架"></textarea></div>
+      <button class="btn btn-primary" onclick="doSaveConfig()">保存配置</button>
+    </div>
+  </div>
+
+  <!-- 使用指南页 -->
+  <div id="guidePage" style="display:none;">
+    <div class="flex justify-between items-center" style="margin-bottom:16px;">
+      <div class="card-title" style="margin:0;">📘 使用指南</div>
+      <button class="btn btn-sm btn-outline" onclick="closePage()">返回</button>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;line-height:2;color:var(--ink);">
+<b>1. 配置行业信息</b>
+进入设置，填写你的行业、品牌名和简介，辉辉会根据这些信息定制文案风格。
+
+<b>2. 生成文案</b>
+输入主题或留空让辉辉选题，选择时长和模式（大纲/逐字稿/问题），点击生成。
+
+<b>3. 改写文案</b>
+粘贴别人的文案，辉辉帮你用自己的话重新讲，不抄袭、有特色。
+
+<b>4. 参考文案</b>
+喂给辉辉好的文案，它会学习风格特点，之后生成的内容会模仿这些风格。
+
+<b>5. 提词器</b>
+生成的文案可以一键送入提词器。启动悬浮提词器后，切到相机录视频也能看到文字。支持镜像模式、速度调节、字号调节。
+
+<b>6. 收藏</b>
+好的文案点⭐收藏，随时在「我的收藏」中查看。
+
+<b>7. 改进 & AI 学习</b>
+对文案提出修改意见，辉辉会改进并自动学习你的风格偏好。
+      </div>
+    </div>
+  </div>
+
+  <!-- 隐私政策页 -->
+  <div id="privacyPage" style="display:none;">
+    <div class="flex justify-between items-center" style="margin-bottom:16px;">
+      <div class="card-title" style="margin:0;">🔒 隐私政策</div>
+      <button class="btn btn-sm btn-outline" onclick="closePage()">返回</button>
+    </div>
+    <div class="card">
+      <div style="font-size:14px;line-height:2;color:var(--ink);">
+<b>辉辉提词器 隐私政策</b>
+更新日期：2026年3月31日
+生效日期：2026年3月31日
+
+本应用（"辉辉提词器"）由个人开发者开发，我们非常重视用户的隐私保护。请在使用前仔细阅读本隐私政策。
+
+<b>一、信息收集</b>
+本应用仅在设备本地存储以下信息，不会上传到任何服务器：
+• 行业配置信息（行业名称、品牌名、简介、行文逻辑）
+• 生成的文案内容及收藏记录
+• 参考文案及 AI 分析结果
+• AI 学习到的风格偏好规则
+
+<b>二、网络请求</b>
+本应用会将用户输入的主题和文案内容发送至第三方 AI 服务（Moonshot/Kimi API）进行内容生成和分析。该请求仅用于生成文案，我们不会存储或转发这些数据用于其他目的。
+
+<b>三、权限说明</b>
+• 网络访问权限（INTERNET）：用于调用 AI 接口生成文案。
+• 悬浮窗权限（SYSTEM_ALERT_WINDOW）：用于提词器悬浮窗功能，在录制视频时显示提词内容。
+• 前台服务权限（FOREGROUND_SERVICE）：用于保持提词器悬浮窗在后台运行。
+
+<b>四、数据安全</b>
+• 所有用户数据存储在设备本地（IndexedDB），不会上传至任何服务器。
+• API 密钥加密存储在设备中。
+• 卸载应用后，所有本地数据将被自动清除。
+
+<b>五、第三方服务</b>
+本应用使用以下第三方服务：
+• Moonshot AI（月之暗面）：提供文案生成能力。其隐私政策请参阅 Moonshot 官方网站。
+
+<b>六、未成年人保护</b>
+本应用不专门面向未成年人。如您是未成年人，请在监护人指导下使用。
+
+<b>七、隐私政策更新</b>
+我们可能会不时更新本隐私政策。更新后的政策将在应用内公布。
+
+<b>八、联系我们</b>
+如您对本隐私政策有任何疑问，请联系开发者。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/db.js"></script>
+<script src="js/api.js"></script>
+<script>
+const LOADING_MSGS = [
+  '辉辉正在构思...', '辉辉正在打磨文案...', '辉辉灵感爆发中...',
+  '辉辉在认真写...', '辉辉快写好了...'
+];
+function randomLoading() { return LOADING_MSGS[Math.floor(Math.random() * LOADING_MSGS.length)]; }
+function loadingHtml(msg) {
+  return `<div class="card loading-card"><div class="loading-dots"><span></span><span></span><span></span></div><div class="loading-text">${msg || randomLoading()}</div></div>`;
+}
+
+function toast(msg, type='success') {
+  const d = document.createElement('div'); d.className = 'toast ' + type; d.textContent = msg;
+  document.body.appendChild(d); setTimeout(() => d.remove(), 3000);
+}
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function copyText(t) { navigator.clipboard.writeText(t).then(() => toast('已复制')).catch(() => toast('复制失败','error')); }
+
+function toggleTheme() {
+  const t = document.documentElement.getAttribute('data-theme') === 'dark' ? '' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('bb_theme', t);
+}
+(function(){ const t = localStorage.getItem('bb_theme'); if(t) document.documentElement.setAttribute('data-theme', t); })();
+
+// ── 菜单 ──
+function toggleMenu() {
+  document.getElementById('menuDropdown').classList.toggle('active');
+  document.getElementById('menuBackdrop').classList.toggle('active');
+}
+
+function openPage(page) {
+  toggleMenu();
+  document.getElementById('mainContent').style.display = 'none';
+  document.querySelectorAll('.tab-bar').forEach(t => t.style.display = 'none');
+  document.getElementById('favoritesPage').style.display = 'none';
+  document.getElementById('settingsPage').style.display = 'none';
+  document.getElementById('guidePage').style.display = 'none';
+  document.getElementById('privacyPage').style.display = 'none';
+  if (page === 'favorites') { document.getElementById('favoritesPage').style.display = 'block'; loadFavorites(); }
+  if (page === 'settings') { document.getElementById('settingsPage').style.display = 'block'; loadConfig(); }
+  if (page === 'guide') { document.getElementById('guidePage').style.display = 'block'; }
+  if (page === 'privacy') { document.getElementById('privacyPage').style.display = 'block'; }
+}
+
+function closePage() {
+  document.getElementById('favoritesPage').style.display = 'none';
+  document.getElementById('settingsPage').style.display = 'none';
+  document.getElementById('guidePage').style.display = 'none';
+  document.getElementById('privacyPage').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+  document.querySelectorAll('.tab-bar').forEach(t => t.style.display = 'flex');
+}
+
+// ── Tab ──
+function showTab(i) {
+  document.querySelectorAll('.tab').forEach((t,j) => t.classList.toggle('active', j===i));
+  document.querySelectorAll('.section').forEach((s,j) => s.classList.toggle('active', j===i));
+  if (i === 2) loadRefs();
+}
+
+// ── 时长标签切换 ──
+const DUR_TIME = ['1分钟','3分钟','5分钟'];
+const DUR_Q    = ['3个问题','6个问题','9个问题'];
+function updateDurLabels(prefix) {
+  const mode = document.querySelector(`input[name="${prefix}Mode"]:checked`).value;
+  const labels = document.querySelectorAll(`.${prefix}-dur-label`);
+  const texts = mode === 'questions' ? DUR_Q : DUR_TIME;
+  labels.forEach((el, i) => el.textContent = texts[i]);
+}
+
+// ── Onboarding ──
+const OB_STEPS = [
+  { icon: '👋', title: '欢迎使用辉辉提词器', desc: '你的AI口播助手，帮你生成文案、改写内容、直播提词，一个App搞定。' },
+  { icon: '⚙️', title: '先配置你的行业', desc: '告诉辉辉你是做什么的，它会根据行业和品牌定制文案风格。' },
+  { icon: '📝', title: '生成 → 提词 → 开播', desc: '输入主题生成文案，一键送入悬浮提词器，切到相机直接开录。' },
+  { icon: '⭐', title: '好文案随手收藏', desc: '满意的内容点⭐收藏，下次直播随时调出来用。' }
+];
+let obStep = 0;
+
+function showOnboarding() {
+  document.getElementById('onboarding').style.display = 'flex';
+  obStep = 0;
+  renderObStep();
+}
+
+function renderObStep() {
+  const s = OB_STEPS[obStep];
+  document.getElementById('obIcon').textContent = s.icon;
+  document.getElementById('obTitle').textContent = s.title;
+  document.getElementById('obDesc').textContent = s.desc;
+  document.getElementById('obDots').innerHTML = OB_STEPS.map((_,i) => `<div class="ob-dot${i===obStep?' active':''}"></div>`).join('');
+  document.getElementById('obBtn').textContent = obStep === OB_STEPS.length - 1 ? '开始使用' : '下一步';
+}
+
+function nextOnboarding() {
+  obStep++;
+  if (obStep >= OB_STEPS.length) {
+    document.getElementById('onboarding').style.display = 'none';
+    localStorage.setItem('bb_onboarded', '1');
+    // 首次引导完成后打开设置页
+    openPage('settings');
+    return;
+  }
+  renderObStep();
+}
+
+// ── Config ──
+async function loadConfig() {
+  const cfg = await DB.getConfig();
+  document.getElementById('cfgIndustry').value = cfg.industry_name || '';
+  document.getElementById('cfgCompany').value = cfg.company_name || '';
+  document.getElementById('cfgDesc').value = cfg.company_desc || '';
+  document.getElementById('cfgGuide').value = cfg.writing_guide || '';
+}
+
+async function doSaveConfig() {
+  const ind = document.getElementById('cfgIndustry').value.trim();
+  const comp = document.getElementById('cfgCompany').value.trim();
+  if (!ind || !comp) return toast('行业和品牌名必填', 'error');
+  await DB.saveConfig({
+    industry_name: ind, company_name: comp,
+    company_desc: document.getElementById('cfgDesc').value.trim(),
+    writing_guide: document.getElementById('cfgGuide').value.trim()
+  });
+  toast('辉辉记住了');
+}
+
+// ── Generate ──
+async function doGenerate() {
+  const cfg = await DB.getConfig();
+  if (!cfg.industry_name) { toast('先去设置里配置行业信息','error'); openPage('settings'); return; }
+  const topic = document.getElementById('topic').value.trim();
+  const duration = parseInt(document.querySelector('input[name="genDur"]:checked').value);
+  const outputMode = document.querySelector('input[name="genMode"]:checked').value;
+  const area = document.getElementById('resultArea');
+  area.innerHTML = loadingHtml();
+  try {
+    let finalTopic = topic;
+    if (!finalTopic) {
+      area.innerHTML = loadingHtml('辉辉在想选题...');
+      const topics = await API.autoPickTopics(1);
+      finalTopic = topics[0] || '今日话题';
+      area.innerHTML = loadingHtml('辉辉正在写「' + finalTopic + '」...');
+    }
+    const r = await API.generateSingle(finalTopic, duration, outputMode);
+    area.innerHTML = renderContent(r);
+    toast('辉辉写好了');
+  } catch(e) { area.innerHTML = `<div class="card text-danger">${escHtml(e.message)}</div>`; }
+}
+
+function renderContent(c) {
+  return `
+  <div class="content-item" id="ci-${c.id}">
+    <div class="content-topic">${escHtml(c.topic)}</div>
+    <div class="content-body">${escHtml(c.content)}</div>
+    <div class="content-actions">
+      <button class="btn btn-sm btn-outline" onclick="copyText(document.querySelector('#ci-${c.id} .content-body').textContent)">复制</button>
+      <button class="btn btn-sm btn-outline" onclick="toggleImprove(${c.id})">改进</button>
+      <button class="btn btn-sm btn-outline" onclick="doFavorite('${escHtml(c.topic).replace(/'/g,"\\'")}', document.querySelector('#ci-${c.id} .content-body').textContent)">收藏</button>
+      <button class="btn btn-sm btn-outline" onclick="doRegenerate()">重新生成</button>
+      <button class="btn btn-sm btn-primary" onclick="sendToTeleprompter(document.querySelector('#ci-${c.id} .content-body').textContent)">提词器</button>
+    </div>
+    <div class="improve-panel" id="ip-${c.id}" style="display:none;">
+      <textarea placeholder="告诉辉辉怎么改，如：更口语化、语气轻松点..."></textarea>
+      <div class="flex gap-8 items-center">
+        <button class="btn btn-sm btn-primary" onclick="submitImprove(${c.id})">辉辉改进</button>
+        <span id="is-${c.id}" class="text-muted"></span>
+      </div>
+      <div id="il-${c.id}" style="margin-top:8px;"></div>
+    </div>
+  </div>`;
+}
+
+function toggleImprove(id) {
+  const el = document.getElementById('ip-' + id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitImprove(id) {
+  const ta = document.querySelector('#ip-' + id + ' textarea');
+  const instruction = ta.value.trim();
+  if (!instruction) return toast('告诉辉辉要怎么改', 'error');
+  const st = document.getElementById('is-' + id);
+  st.textContent = '辉辉在改...'; st.className = 'text-muted';
+  try {
+    const r = await API.improveContent(id, instruction);
+    document.querySelector('#ci-' + id + ' .content-body').textContent = r.content;
+    if (r.learned_rules && r.learned_rules.length) {
+      document.getElementById('il-' + id).innerHTML = '<span class="text-muted">辉辉学到了：</span>' + r.learned_rules.map(x => `<span class="learned-tag">${escHtml(x)}</span>`).join('');
+    }
+    st.textContent = '✓ 辉辉改好了'; st.className = 'text-success';
+  } catch(e) { st.textContent = e.message; st.className = 'text-danger'; }
+}
+
+// ── Favorites ──
+async function doFavorite(topic, content) {
+  await DB.addFavorite(topic, content);
+  toast('已收藏');
+  // 显示提示气泡指向左上角菜单
+  showFavTip();
+}
+
+function showFavTip() {
+  const existing = document.querySelector('.fav-tip');
+  if (existing) existing.remove();
+  const existingBg = document.querySelector('.fav-tip-backdrop');
+  if (existingBg) existingBg.remove();
+  const bg = document.createElement('div');
+  bg.className = 'fav-tip-backdrop';
+  bg.onclick = () => { bg.remove(); tip.remove(); };
+  const tip = document.createElement('div');
+  tip.className = 'fav-tip';
+  tip.textContent = '收藏的内容在这里哦 👆';
+  document.body.appendChild(bg);
+  document.body.appendChild(tip);
+}
+
+// ── Regenerate ──
+function doRegenerate() {
+  doGenerate();
+}
+
+async function loadFavorites() {
+  const el = document.getElementById('favList');
+  const favs = await DB.getFavorites();
+  if (!favs.length) { el.innerHTML = '<div class="card text-muted" style="text-align:center;">还没有收藏，生成文案后点 ⭐ 收藏</div>'; return; }
+  el.innerHTML = favs.map(f => `
+    <div class="content-item">
+      <div class="content-topic">${escHtml(f.topic)}</div>
+      <div class="content-body">${escHtml(f.content)}</div>
+      <div class="content-actions">
+        <button class="btn btn-sm btn-outline" onclick="copyText(this.closest('.content-item').querySelector('.content-body').textContent)">复制</button>
+        <button class="btn btn-sm btn-primary" onclick="sendToTeleprompter(this.closest('.content-item').querySelector('.content-body').textContent)">提词器</button>
+        <button class="btn btn-sm btn-danger" onclick="doDelFav(${f.id})">取消收藏</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function doDelFav(id) { await DB.deleteFavorite(id); loadFavorites(); }
+
+// ── Rewrite ──
+async function doRewrite() {
+  const text = document.getElementById('rewriteInput').value.trim();
+  const duration = parseInt(document.querySelector('input[name="rwDur"]:checked').value);
+  const outputMode = document.querySelector('input[name="rwMode"]:checked').value;
+  if (!text || text.length < 10) return toast('文案太短', 'error');
+  document.getElementById('rewriteResult').innerHTML = loadingHtml('辉辉正在改写...');
+  try {
+    const rewritten = await API.rewriteContent(text, duration, outputMode);
+    document.getElementById('rewriteResult').innerHTML = `
+      <div class="content-item">
+        <div class="content-topic">辉辉改写完成</div>
+        <div class="content-body">${escHtml(rewritten)}</div>
+        <div class="content-actions">
+          <button class="btn btn-sm btn-outline" onclick="copyText(this.closest('.content-item').querySelector('.content-body').textContent)">复制</button>
+          <button class="btn btn-sm btn-outline" onclick="doFavorite('改写文案', this.closest('.content-item').querySelector('.content-body').textContent)">收藏</button>
+          <button class="btn btn-sm btn-primary" onclick="sendToTeleprompter(this.closest('.content-item').querySelector('.content-body').textContent)">提词器</button>
+        </div>
+      </div>`;
+    toast('辉辉改好了');
+  } catch(e) { document.getElementById('rewriteResult').innerHTML = `<div class="text-danger">${escHtml(e.message)}</div>`; }
+}
+
+// ── References ──
+async function loadRefs() {
+  const el = document.getElementById('refList');
+  el.innerHTML = '<div class="card"><span class="spinner"></span></div>';
+  const refs = await DB.getReferences();
+  if (!refs.length) {
+    el.innerHTML = '';
+    document.getElementById('refInputCard').style.display = 'block';
+    document.getElementById('refAddMore').style.display = 'none';
+    return;
+  }
+  el.innerHTML = refs.map(ref => `
+    <div class="content-item">
+      <div class="content-topic">${escHtml(ref.title || '参考文案')}</div>
+      <div class="content-body" style="max-height:120px;overflow-y:auto;font-size:13px;color:var(--muted);">${escHtml(ref.content)}</div>
+      ${ref.analysis ? `<div style="margin-top:10px;padding:10px;background:var(--primary-light);border-radius:8px;font-size:13px;"><div style="font-weight:600;margin-bottom:4px;color:var(--primary);">辉辉的分析</div><div style="white-space:pre-wrap;">${escHtml(ref.analysis)}</div></div>` : ''}
+      <div class="content-actions" style="margin-top:8px;">
+        <button class="btn btn-sm btn-danger" onclick="doDelRef(${ref.id})">删除</button>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('refInputCard').style.display = 'none';
+  document.getElementById('refAddMore').style.display = 'block';
+}
+
+function showRefInput() {
+  document.getElementById('refInputCard').style.display = 'block';
+  document.getElementById('refContent').focus();
+}
+
+async function doAddRef() {
+  const content = document.getElementById('refContent').value.trim();
+  const title = document.getElementById('refTitle').value.trim();
+  if (!content || content.length < 10) return toast('文案太短，至少10个字', 'error');
+  const btn = document.querySelector('#refInputCard .btn-primary');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;vertical-align:middle;"></span> 辉辉在分析...';
+  try {
+    let analysis = '';
+    try { analysis = await API.analyzeReference(content); } catch(e) {}
+    await DB.addReference(title, content, analysis);
+    document.getElementById('refContent').value = '';
+    document.getElementById('refTitle').value = '';
+    toast('辉辉学到了');
+    loadRefs();
+  } catch(e) { toast(e.message, 'error'); }
+  btn.disabled = false; btn.textContent = '添加';
+}
+
+async function doDelRef(id) { await DB.deleteReference(id); loadRefs(); }
+
+// ── 提词器 ──
+function sendToTeleprompter(text) {
+  document.getElementById('tpInput').value = text;
+  closePage();
+  showTab(3);
+  toast('内容已送入提词器');
+}
+
+async function launchFloatingTp() {
+  const text = document.getElementById('tpInput').value.trim();
+  if (!text) return toast('先粘贴内容', 'error');
+  const height = parseInt(document.querySelector('input[name="tpHeight"]:checked').value);
+  const mirror = document.getElementById('tpMirror').checked;
+  try {
+    const { Teleprompter } = window.Capacitor.Plugins;
+    await Teleprompter.start({ text, height, size: 22, speed: 1.5, mirror });
+    toast('悬浮提词器已启动');
+  } catch (e) {
+    toast(e.message || '启动失败，请授权悬浮窗权限', 'error');
+  }
+}
+
+async function stopFloatingTp() {
+  try {
+    const { Teleprompter } = window.Capacitor.Plugins;
+    await Teleprompter.stop();
+    toast('提词器已关闭');
+  } catch (e) { toast('关闭失败', 'error'); }
+}
+
+// ── Init ──
+DB.openDB().then(async () => {
+  await loadConfig();
+  // 检查是否首次使用
+  if (!localStorage.getItem('bb_onboarded')) {
+    showOnboarding();
+  }
+  // 检查行业配置状态
+  const cfg = await DB.getConfig();
+  if (!cfg.industry_name && localStorage.getItem('bb_onboarded')) {
+    toast('请先在设置中配置行业信息', 'error');
+  }
+});
+</script>
+</body>
+</html>
