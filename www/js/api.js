@@ -7,8 +7,9 @@ const BASE_URL = 'https://api.moonshot.cn/v1';
 const MODEL = 'moonshot-v1-8k';
 const DURATION_WORDS = { 1: '200-300', 3: '600-900', 5: '1000-1500' };
 
-// API Key：内置，通过原生加密存储保护
-const _BUILT_IN_KEY = atob('c2stSjlzY0NDMDlKTnZNdVp6bkV5TWlwTEFiSUR3OGZtVnZsWTlKaGttV2JJTjFzazUx');
+// API Key：构建时内置，开源代码中为占位符
+// 如需自行部署，请替换为你的 Moonshot API Key
+const _BUILT_IN_KEY = 'YOUR_MOONSHOT_API_KEY';
 let _apiKey = _BUILT_IN_KEY;
 
 async function getApiKey() {
